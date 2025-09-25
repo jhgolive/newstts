@@ -16,7 +16,6 @@
     position: fixed;
     top: 0;
     left: 0;
-    transform: translateY(-8px);
     width: 100vw;
     height: 40px;
     z-index: 9999;
@@ -29,14 +28,11 @@
     font-weight: bold;
     text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black,
                  -1px -1px black, -1px 1px black, 1px -1px black, 1px 1px black;
-    will-change: transform;
-    backface-visibility: hidden;
     position: absolute;
     top: 0;
     white-space: nowrap;
-    animation-name: scroll;
-    animation-timing-function: linear;
-    animation-iteration-count: 1;
+    will-change: transform;
+    backface-visibility: hidden;
   }
 
   @keyframes scroll {
@@ -46,11 +42,11 @@
 </style>
 </head>
 <body>
-444<div id="wrapper">
+555<div id="wrapper">
   <div id="news">뉴스 로딩 중...</div>
 </div>
 
-<audio id="ttsAudio" autoplay playsinline></audio>
+<audio id="ttsAudio" playsinline></audio>
 
 <script>
 const newsEl = document.getElementById("news");
@@ -76,36 +72,36 @@ async function loadNews() {
 async function startScrollAndTTS(text) {
   newsEl.textContent = text;
 
-  // TTS 길이 측정: 서버에서 mp3를 미리 받아 길이 계산
+  // TTS mp3 받아오기
   const ttsRes = await fetch(TTS_API);
   const ttsBlob = await ttsRes.blob();
   audioEl.src = URL.createObjectURL(ttsBlob);
+  audioEl.pause();
+  audioEl.currentTime = 0;
 
-  // mp3 로딩 후 재생 시간 확인
+  // mp3 로딩 후 재생 준비
   audioEl.onloadedmetadata = () => {
-    const duration = audioEl.duration; // TTS 재생 시간
+    const duration = audioEl.duration;
 
-    // 스크롤 속도 계산: 전체 텍스트가 duration 동안 이동
+    // 스크롤 속도 계산
     const wrapperWidth = newsEl.parentElement.offsetWidth;
     const textWidth = newsEl.offsetWidth;
     const distance = wrapperWidth + textWidth;
-    const speed = distance / duration; // px/sec
-    newsEl.style.animationDuration = `${duration}s`;
-
-    newsEl.style.animation = "none";
+    
+    newsEl.style.animation = "none"; // 기존 애니메이션 초기화
     newsEl.offsetHeight; // 리플로우 강제
-    newsEl.style.animation = `scroll linear ${duration}s 1`;
+    newsEl.style.animation = `scroll ${duration}s linear 1`;
 
     // 2초 딜레이 후 TTS 재생
     setTimeout(() => {
-        audioEl.muted = true;  // autoplay 위해 잠시 muted
-        audioEl.play().then(() => audioEl.muted = false).catch(err => console.warn(err));
-    }, 10000);
+      audioEl.play().catch(err => console.warn(err));
+    }, 2000);
   };
 
+  // 스크롤 끝나면 다음 뉴스
   newsEl.addEventListener("animationend", function handler() {
     newsEl.removeEventListener("animationend", handler);
-    loadNews(); // 한 바퀴 끝나면 새 뉴스 불러오기
+    loadNews();
   });
 }
 
