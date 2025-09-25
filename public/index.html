@@ -13,13 +13,13 @@
   #wrapper {
     white-space: nowrap;
     overflow: hidden;
-    position: fixed;   /* 화면에 고정 */
-    top: 0;         /* 화면 상단 */
+    position: fixed;
+    top: 0;
     left: 0;
-    transform: translateY(-8px); /* 강제 위치 조정 */
+    transform: translateY(-8px);
     width: 100vw;
     height: 40px;
-    z-index: 9999;     /* 다른 요소보다 위에 */
+    z-index: 9999;
   }
 
   #news {
@@ -27,16 +27,13 @@
     font-size: 28px;
     color: white;
     font-weight: bold;
-    text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black, 
+    text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black,
                  -1px -1px black, -1px 1px black, 1px -1px black, 1px 1px black;
     will-change: transform;
     backface-visibility: hidden;
     position: absolute;
     top: 0;
     white-space: nowrap;
-    animation-name: scroll;
-    animation-timing-function: linear;
-    animation-iteration-count: 1; /* 한 번만 실행 */
   }
 
   @keyframes scroll {
@@ -50,13 +47,16 @@
   <div id="news">뉴스 로딩 중...</div>
 </div>
 
+<audio id="ttsAudio" autoplay></audio>
+
 <script>
 const newsEl = document.getElementById("news");
-const API_URL = "https://proxy2-production-01e2.up.railway.app/news";
+const audioEl = document.getElementById("ttsAudio");
+const API_URL = "http://localhost:8080/news";
+const TTS_URL = "http://localhost:8080/news-tts";
 
 let pendingNews = null;
 
-// 뉴스 가져오기
 async function loadNews() {
   try {
     const res = await fetch(API_URL);
@@ -64,42 +64,38 @@ async function loadNews() {
     if (data.news) {
       pendingNews = data.news;
       startScroll(pendingNews);
+      playTTS();
     }
   } catch (err) {
     console.error("뉴스 불러오기 실패", err);
   }
 }
 
-// CSS 애니메이션으로 스크롤
 function startScroll(text) {
   newsEl.textContent = text;
 
-  // 텍스트 길이에 따라 애니메이션 시간 조절 (px/sec = 100)
   const wrapperWidth = newsEl.parentElement.offsetWidth;
   const textWidth = newsEl.offsetWidth;
   const speed = 100; // px/sec
   const duration = (wrapperWidth + textWidth) / speed;
 
-  newsEl.style.animationDuration = `${duration}s`;
-
-  // 애니메이션 끝나면 새 뉴스 있으면 다시 실행
-  newsEl.addEventListener("animationend", function handler() {
-    newsEl.removeEventListener("animationend", handler);
-    if (pendingNews) {
-      startScroll(pendingNews);
-      pendingNews = null;
-    }
-    loadNews(); // 한 바퀴 끝날 때 서버 갱신
-  });
-
-  // 강제로 애니메이션 재시작
   newsEl.style.animation = "none";
   newsEl.offsetHeight; // 리플로우
   newsEl.style.animation = `scroll linear ${duration}s 1`;
+
+  newsEl.addEventListener("animationend", function handler() {
+    newsEl.removeEventListener("animationend", handler);
+    loadNews(); // 한 바퀴 끝나면 서버 갱신
+  });
 }
 
-// 초기 실행
-loadNews();
+function playTTS() {
+  audioEl.src = TTS_URL;
+  audioEl.play().catch(err => console.warn("자동 재생 실패:", err));
+}
+
+// 페이지 로드 시 실행
+window.addEventListener("load", loadNews);
 </script>
 </body>
 </html>
