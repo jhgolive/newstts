@@ -3,19 +3,18 @@ import express from "express";
 import cors from "cors";
 import xml2js from "xml2js";
 import gtts from "google-tts-api";
-import fetch from "node-fetch";
-
+import fetch from "node-fetch"; // Node 환경에서 안정적 fetch 사용
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// ✅ 특정 도메인만 허용 (보안 강화)
+// ✅ CORS 설정 (GitHub Pages 허용)
 app.use(cors({
   origin: "https://jhgolive.github.io",
   methods: ["GET"]
 }));
 
-// ✅ 혹시 cors()가 무시될 경우 대비해서 직접 헤더 추가
+// 혹시 cors()가 무시될 경우 대비
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "https://jhgolive.github.io");
   res.header("Access-Control-Allow-Methods", "GET");
@@ -25,6 +24,7 @@ app.use((req, res, next) => {
 let lastNews = "뉴스 로딩 중...";
 const parser = new xml2js.Parser({ explicitArray: false });
 
+// 가져올 RSS 카테고리
 const CATEGORY_RSS = [
   "https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko",
   "https://news.google.com/rss/topics/CAAqIQgKIhtDQkFTRGdvSUwyMHZNRFp4WkRNU0FtdHZLQUFQAQ?hl=ko&gl=KR&ceid=KR:ko",
@@ -37,10 +37,14 @@ const CATEGORY_RSS = [
   "https://news.google.com/rss/topics/CAAqIQgKIhtDQkFTRGdvSUwyMHZNR3QwTlRFU0FtdHZLQUFQAQ?hl=ko&gl=KR&ceid=KR:ko"
 ];
 
-// ✅ RSS fetch
+// ✅ RSS fetch with timeout
 async function fetchRSS(url) {
   try {
-    const res = await fetch(url);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000); // 5초 타임아웃
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeout);
+
     if (!res.ok) throw new Error(`RSS fetch failed: ${res.status}`);
     const xml = await res.text();
     const result = await parser.parseStringPromise(xml);
@@ -72,12 +76,12 @@ async function fetchAllNews() {
 fetchAllNews();
 setInterval(fetchAllNews, 600000);
 
-// ✅ 뉴스 API
+// ✅ /news 라우트
 app.get("/news", (req, res) => {
   res.json({ news: lastNews });
 });
 
-// ✅ TTS API
+// ✅ /tts 라우트 (구글 TTS mp3 URL 리다이렉트)
 app.get("/tts", (req, res) => {
   try {
     const text = lastNews || "뉴스 로딩 중...";
@@ -86,13 +90,19 @@ app.get("/tts", (req, res) => {
       slow: false,
       host: "https://translate.google.com"
     });
-    res.redirect(url); // mp3 스트리밍 URL 리다이렉트
+    res.redirect(url);
   } catch (err) {
     console.error("TTS 실패", err);
     res.status(500).send("TTS 실패");
   }
 });
 
+// ✅ 기본 루트
+app.get("/", (req, res) => {
+  res.send("Server is running 🚀");
+});
+
+// 서버 실행
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
 });
