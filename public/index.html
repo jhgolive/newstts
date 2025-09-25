@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>뉴스음성</title>
+<title>뉴스여자음성</title>
 <style>
   body {
     margin: 0;
@@ -40,7 +40,7 @@
 </style>
 </head>
 <body>
-222<div id="wrapper">
+<div id="wrapper">
   <div id="news">뉴스 로딩 중...</div>
 </div>
 
@@ -84,10 +84,10 @@ async function startScrollAndTTS(text) {
     newsEl.offsetHeight;
     newsEl.style.animation = `scroll ${duration}s linear 1`;
 
-    // 3초 지연 후 TTS 재생
+    // 1초 지연 후 TTS 재생
     setTimeout(() => {
       audioEl.play().catch(err => console.warn(err));
-    }, 2000); // 2000ms = 2초
+    }, 1000); 
   };
 
   newsEl.addEventListener("animationend", function handler() {
