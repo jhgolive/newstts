@@ -3,7 +3,7 @@ import express from "express";
 import cors from "cors";
 import xml2js from "xml2js";
 import gtts from "google-tts-api";
-import fetch from "node-fetch"; // Node 환경에서 안정적 fetch 사용
+import fetch from "node-fetch";
 
 const app = express();
 const PORT = process.env.PORT || 8080;
