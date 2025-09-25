@@ -1,12 +1,24 @@
-const express = require("express");
-const cors = require("cors");
-const xml2js = require("xml2js");
-const gtts = require("google-tts-api");
+// index.js
+import express from "express";
+import cors from "cors";
+import xml2js from "xml2js";
+import gtts from "google-tts-api";
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-app.use(cors());
+// ✅ 특정 도메인만 허용 (보안 강화)
+app.use(cors({
+  origin: "https://jhgolive.github.io",
+  methods: ["GET"]
+}));
+
+// ✅ 혹시 cors()가 무시될 경우 대비해서 직접 헤더 추가
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "https://jhgolive.github.io");
+  res.header("Access-Control-Allow-Methods", "GET");
+  next();
+});
 
 let lastNews = "뉴스 로딩 중...";
 const parser = new xml2js.Parser({ explicitArray: false });
@@ -23,7 +35,7 @@ const CATEGORY_RSS = [
   "https://news.google.com/rss/topics/CAAqIQgKIhtDQkFTRGdvSUwyMHZNR3QwTlRFU0FtdHZLQUFQAQ?hl=ko&gl=KR&ceid=KR:ko"
 ];
 
-// RSS fetch
+// ✅ RSS fetch
 async function fetchRSS(url) {
   try {
     const res = await fetch(url);
@@ -40,7 +52,7 @@ async function fetchRSS(url) {
   }
 }
 
-// 전체 뉴스 가져오기
+// ✅ 전체 뉴스 가져오기
 async function fetchAllNews() {
   try {
     const promises = CATEGORY_RSS.map(url => fetchRSS(url));
@@ -58,22 +70,23 @@ async function fetchAllNews() {
 fetchAllNews();
 setInterval(fetchAllNews, 600000);
 
+// ✅ 뉴스 API
 app.get("/news", (req, res) => {
   res.json({ news: lastNews });
 });
 
-// TTS mp3 URL 제공
+// ✅ TTS API
 app.get("/tts", (req, res) => {
   try {
     const text = lastNews || "뉴스 로딩 중...";
     const url = gtts.getAudioUrl(text, {
-      lang: 'ko',
+      lang: "ko",
       slow: false,
-      host: 'https://translate.google.com'
+      host: "https://translate.google.com"
     });
-    res.redirect(url); // 클라이언트는 mp3 자동 재생 가능
+    res.redirect(url); // mp3 스트리밍 URL 리다이렉트
   } catch (err) {
-    console.error(err);
+    console.error("TTS 실패", err);
     res.status(500).send("TTS 실패");
   }
 });
