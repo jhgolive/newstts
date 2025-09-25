@@ -84,7 +84,7 @@ async function fetchAllNews() {
 fetchAllNews();
 setInterval(fetchAllNews, 3000000);
 
-// 텍스트를 4500바이트 이하로 쪼개기
+// 텍스트를 4500바이트 이하로 분할
 function splitTextForTTS(text, maxBytes = 4500) {
   const parts = [];
   let current = "";
@@ -105,20 +105,20 @@ app.get("/news", (req, res) => {
   res.json({ news: lastNews });
 });
 
-// Google TTS (분할 + 합치기)
+// Google TTS (병렬 처리 + 합치기)
 app.get("/news-tts", async (req, res) => {
   try {
     const chunks = splitTextForTTS(lastNews);
-    const buffers = [];
 
-    for (const chunk of chunks) {
+    // 병렬 TTS 요청
+    const buffers = await Promise.all(chunks.map(async (chunk) => {
       const [response] = await ttsClient.synthesizeSpeech({
         input: { text: chunk },
         voice: { languageCode: "ko-KR", name: "ko-KR-Standard-A", ssmlGender: "FEMALE" },
         audioConfig: { audioEncoding: "MP3" },
       });
-      buffers.push(response.audioContent);
-    }
+      return response.audioContent;
+    }));
 
     const merged = Buffer.concat(buffers);
     res.set({
@@ -126,6 +126,7 @@ app.get("/news-tts", async (req, res) => {
       "Content-Length": merged.length,
     });
     res.send(merged);
+
   } catch (err) {
     console.error("TTS 생성 실패", err);
     res.status(500).send("TTS 생성 실패 😢");
