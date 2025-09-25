@@ -79,15 +79,11 @@ async function startScrollAndTTS(text) {
 
   audioEl.onloadedmetadata = () => {
     const duration = audioEl.duration;
-    const wrapperWidth = newsEl.parentElement.offsetWidth;
-    const textWidth = newsEl.offsetWidth;
-    const distance = wrapperWidth + textWidth;
 
     newsEl.style.animation = "none";
     newsEl.offsetHeight;
     newsEl.style.animation = `scroll ${duration}s linear 1`;
 
-    // TTS 재생
     audioEl.play().catch(err => console.warn(err));
   };
 
