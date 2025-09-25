@@ -40,7 +40,7 @@
 </style>
 </head>
 <body>
-<div id="wrapper">
+111<div id="wrapper">
   <div id="news">뉴스 로딩 중...</div>
 </div>
 
@@ -84,7 +84,10 @@ async function startScrollAndTTS(text) {
     newsEl.offsetHeight;
     newsEl.style.animation = `scroll ${duration}s linear 1`;
 
-    audioEl.play().catch(err => console.warn(err));
+    // 3초 지연 후 TTS 재생
+    setTimeout(() => {
+      audioEl.play().catch(err => console.warn(err));
+    }, 3000); // 3000ms = 3초
   };
 
   newsEl.addEventListener("animationend", function handler() {
