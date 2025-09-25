@@ -37,7 +37,7 @@ body {
 </style>
 </head>
 <body>
-888<div id="wrapper">
+<div id="wrapper">
   <div id="news">뉴스 로딩 중...</div>
 </div>
 
@@ -84,7 +84,7 @@ async function startScrollAndTTS(text) {
     // 1초 지연 후 TTS 재생
     setTimeout(() => {
       audioEl.play().catch(err => console.warn(err));
-    }, 1000); 
+    }, 0); //1000 = 1초
   };
 
   newsEl.addEventListener("animationend", function handler() {
