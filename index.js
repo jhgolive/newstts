@@ -3,6 +3,7 @@ import cors from "cors";
 import xml2js from "xml2js";
 import fetch from "node-fetch";
 import path from "path";
+import fs from "fs";
 import textToSpeech from "@google-cloud/text-to-speech";
 
 const app = express();
@@ -14,10 +15,16 @@ app.use(express.static("public"));
 let lastNews = "뉴스 로딩 중...";
 const parser = new xml2js.Parser({ explicitArray: false });
 
+// ✅ 클라우드 환경용: 환경변수 GOOGLE_CREDENTIALS 사용
+if (process.env.GOOGLE_CREDENTIALS) {
+  fs.writeFileSync("/tmp/google-credentials.json", process.env.GOOGLE_CREDENTIALS);
+  process.env.GOOGLE_APPLICATION_CREDENTIALS = "/tmp/google-credentials.json";
+}
+
 // Google Cloud TTS 클라이언트
 const ttsClient = new textToSpeech.TextToSpeechClient();
 
-// 카테고리 RSS URL (원하는 카테고리로 조정)
+// 카테고리 RSS URL
 const CATEGORY_RSS = [
   "https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko" // 헤드라인
 ];
