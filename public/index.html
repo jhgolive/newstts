@@ -20,7 +20,6 @@
     width: 100vw;
     height: 40px;
     z-index: 9999;
-    display: none; /* 처음엔 숨김 */
   }
 
   #news {
@@ -28,7 +27,7 @@
     font-size: 28px;
     color: white;
     font-weight: bold;
-    text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black, 
+    text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black,
                  -1px -1px black, -1px 1px black, 1px -1px black, 1px 1px black;
     will-change: transform;
     backface-visibility: hidden;
@@ -45,36 +44,34 @@
     to { transform: translateX(-100%); }
   }
 
-  #startBtn {
+  #playBtn {
     position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 24px;
-    padding: 12px 24px;
-    background: #ff4444;
+    bottom: 20px;
+    left: 20px;
+    z-index: 10000;
+    padding: 10px 20px;
+    background: red;
     color: white;
+    font-weight: bold;
     border: none;
     border-radius: 8px;
     cursor: pointer;
-    z-index: 10000;
   }
 </style>
 </head>
 <body>
-<button id="startBtn">뉴스 시작하기</button>
-
 <div id="wrapper">
   <div id="news">뉴스 로딩 중...</div>
 </div>
 
-<audio id="ttsAudio" playsinline></audio>
+<!-- 처음에는 무음 autoplay -->
+<audio id="ttsAudio" autoplay muted playsinline></audio>
+<button id="playBtn">🔊 소리 켜기</button>
 
 <script>
 const newsEl = document.getElementById("news");
 const audioEl = document.getElementById("ttsAudio");
-const startBtn = document.getElementById("startBtn");
-const wrapperEl = document.getElementById("wrapper");
+const playBtn = document.getElementById("playBtn");
 
 const NEWS_API = "https://proxy2-production-b5a7.up.railway.app/news";
 const TTS_API = "https://proxy2-production-b5a7.up.railway.app/news-tts";
@@ -110,15 +107,15 @@ function startScroll(text) {
   newsEl.addEventListener("animationend", function handler() {
     newsEl.removeEventListener("animationend", handler);
     pendingNews = null;
-    loadNews(); // 한 바퀴 끝나면 다시 갱신
+    loadNews(); // 한 바퀴 끝나면 새 뉴스 불러오기
   });
 
   newsEl.style.animation = "none";
-  newsEl.offsetHeight; // 리플로우
+  newsEl.offsetHeight; // 리플로우 강제
   newsEl.style.animation = `scroll linear ${duration}s 1`;
 }
 
-// TTS 재생
+// TTS 재생 (URL에 autoplay=1&mute=0 붙이지 않음)
 async function playTTS() {
   try {
     const res = await fetch(TTS_API);
@@ -126,13 +123,13 @@ async function playTTS() {
     if (!data.urls || data.urls.length === 0) return;
 
     let index = 0;
-    audioEl.src = `${data.urls[index]}&autoplay=1&mute=0`;
-    audioEl.play();
+    audioEl.src = data.urls[index];
+    audioEl.play().catch(err => console.warn("자동재생 차단됨:", err));
 
     audioEl.onended = () => {
       index++;
       if (index < data.urls.length) {
-        audioEl.src = `${data.urls[index]}&autoplay=1&mute=0`;
+        audioEl.src = data.urls[index];
         audioEl.play();
       }
     };
@@ -141,12 +138,15 @@ async function playTTS() {
   }
 }
 
-// 버튼 클릭 시 실행
-startBtn.addEventListener("click", () => {
-  startBtn.style.display = "none";  // 버튼 숨기기
-  wrapperEl.style.display = "block"; // 뉴스 표시
-  loadNews(); // 뉴스와 음성 시작
+// 사용자 터치 시 소리 켜기 (유튜브처럼)
+playBtn.addEventListener("click", () => {
+  audioEl.muted = false;
+  audioEl.play().catch(err => console.error("재생 실패:", err));
+  playBtn.style.display = "none"; // 버튼 숨기기
 });
+
+// 초기 실행
+loadNews();
 </script>
 </body>
 </html>
