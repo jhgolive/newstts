@@ -15,8 +15,7 @@ let lastNews = "뉴스 로딩 중...";
 const parser = new xml2js.Parser({ explicitArray: false });
 
 const CATEGORY_RSS = [
-  "https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko" // 헤드라인
-  //"https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx1YlY4U0FtdHZHZ0pMVWlnQVAB?hl=ko&gl=KR&ceid=KR:ko" // 대한민국
+  "https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko"
 ];
 
 // RSS fetch + parse
@@ -59,20 +58,34 @@ app.get("/news", (req, res) => {
   res.json({ news: lastNews });
 });
 
-// TTS mp3 제공 (긴 뉴스도 지원)
+// 🎵 TTS mp3 직접 합쳐서 스트리밍
 app.get("/news-tts", async (req, res) => {
   try {
     const text = lastNews;
 
-    // 긴 텍스트 분할 URL 생성
+    // 구글 TTS 분할 URL 생성
     const urls = googleTTS.getAllAudioUrls(text, {
       lang: "ko",
       slow: false,
-      host: "https://translate.google.com"
     });
 
-    // 첫 번째 URL 반환 (클라이언트에서 순차 재생 가능)
-    res.json({ urls: urls.map(u => u.url) });
+    // 각 조각을 fetch해서 Buffer로 변환
+    const parts = await Promise.all(
+      urls.map(async (u) => {
+        const r = await fetch(u.url);
+        const buf = await r.arrayBuffer();
+        return Buffer.from(buf);
+      })
+    );
+
+    // Buffer 합치기
+    const merged = Buffer.concat(parts);
+
+    res.set({
+      "Content-Type": "audio/mpeg",
+      "Content-Length": merged.length,
+    });
+    res.send(merged);
 
   } catch (err) {
     console.error("TTS 생성 실패", err);
@@ -81,6 +94,10 @@ app.get("/news-tts", async (req, res) => {
 });
 
 // 루트
-app.get("/", (req, res) => res.sendFile(path.join(process.cwd(), "public/index.html")));
+app.get("/", (req, res) => 
+  res.sendFile(path.join(process.cwd(), "public/index.html"))
+);
 
-app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+app.listen(PORT, () => 
+  console.log(`✅ Server running on port ${PORT}`)
+);
