@@ -46,10 +46,11 @@
 </style>
 </head>
 <body>
-<div id="wrapper">
+111<div id="wrapper">
   <div id="news">뉴스 로딩 중...</div>
 </div>
 
+<!-- 자동재생 TTS -->
 <audio id="ttsAudio" autoplay playsinline></audio>
 
 <script>
@@ -59,51 +60,55 @@ const audioEl = document.getElementById("ttsAudio");
 const NEWS_API = "https://proxy2-production-b5a7.up.railway.app/news";
 const TTS_API = "https://proxy2-production-b5a7.up.railway.app/news-tts";
 
+let pendingNews = null;
+
 // 뉴스 불러오기
 async function loadNews() {
   try {
     const res = await fetch(NEWS_API);
     const data = await res.json();
     if (data.news) {
-      startScrollAndTTS(data.news);
+      pendingNews = data.news;
+      startScroll(pendingNews);
+      playTTS();
     }
   } catch (err) {
     console.error("뉴스 불러오기 실패", err);
   }
 }
 
-// 스크롤 + TTS 동기화
-async function startScrollAndTTS(text) {
+// CSS 스크롤
+function startScroll(text) {
   newsEl.textContent = text;
 
-  // TTS 길이 측정: 서버에서 mp3를 미리 받아 길이 계산
-  const ttsRes = await fetch(TTS_API);
-  const ttsBlob = await ttsRes.blob();
-  audioEl.src = URL.createObjectURL(ttsBlob);
+  const wrapperWidth = newsEl.parentElement.offsetWidth;
+  const textWidth = newsEl.offsetWidth;
+  const speed = 100; // px/sec
+  const duration = (wrapperWidth + textWidth) / speed;
 
-  // mp3 로딩 후 재생 시간 확인
-  audioEl.onloadedmetadata = () => {
-    const duration = audioEl.duration; // TTS 재생 시간
-
-    // 스크롤 속도 계산: 전체 텍스트가 duration 동안 이동
-    const wrapperWidth = newsEl.parentElement.offsetWidth;
-    const textWidth = newsEl.offsetWidth;
-    const distance = wrapperWidth + textWidth;
-    const speed = distance / duration; // px/sec
-    newsEl.style.animationDuration = `${duration}s`;
-
-    newsEl.style.animation = "none";
-    newsEl.offsetHeight; // 리플로우 강제
-    newsEl.style.animation = `scroll linear ${duration}s 1`;
-
-    audioEl.muted = true;
-    audioEl.play().then(() => audioEl.muted = false).catch(err => console.warn(err));
-  };
+  newsEl.style.animationDuration = `${duration}s`;
 
   newsEl.addEventListener("animationend", function handler() {
     newsEl.removeEventListener("animationend", handler);
+    pendingNews = null;
     loadNews(); // 한 바퀴 끝나면 새 뉴스 불러오기
   });
+
+  newsEl.style.animation = "none";
+  newsEl.offsetHeight; // 리플로우 강제
+  newsEl.style.animation = `scroll linear ${duration}s 1`;
+}
+
+// TTS 자동재생
+async function playTTS() {
+  try {
+    audioEl.src = TTS_API;
+    audioEl.muted = true;       // autoplay 위해 muted 먼저 켬
+    await audioEl.play();
+    audioEl.muted = false;      // 재생 시작 후 음소거 해제
+  } catch (err) {
+    console.error("TTS 재생 실패", err);
+  }
 }
 
 // 초기 실행
