@@ -2,45 +2,42 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>뉴스여자음성</title>
+<title>뉴스 TTS 스크롤</title>
 <style>
-  body {
-    margin: 0;
-    background: transparent; 
-    overflow: hidden;
-  }
-
-  #wrapper {
-    white-space: nowrap;
-    overflow: hidden;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 40px;
-  }
-
-  #news {
-    display: inline-block;
-    font-size: 28px;
-    color: white;
-    font-weight: bold;
-    text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black,
-                 -1px -1px black, -1px 1px black, 1px -1px black, 1px 1px black;
-    position: absolute;
-    top: 0;
-    white-space: nowrap;
-    will-change: transform;
-  }
-
-  @keyframes scroll {
-    from { transform: translateX(100vw); }
-    to { transform: translateX(-100%); }
-  }
+body {
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+}
+#wrapper {
+  white-space: nowrap;
+  overflow: hidden;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 40px;
+}
+#news {
+  display: inline-block;
+  font-size: 28px;
+  color: white;
+  font-weight: bold;
+  text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black,
+               -1px -1px black, -1px 1px black, 1px -1px black, 1px 1px black;
+  position: absolute;
+  top: 0;
+  white-space: nowrap;
+  will-change: transform;
+}
+@keyframes scroll {
+  from { transform: translateX(100vw); }
+  to { transform: translateX(-100%); }
+}
 </style>
 </head>
 <body>
-<div id="wrapper">
+555<div id="wrapper">
   <div id="news">뉴스 로딩 중...</div>
 </div>
 
@@ -81,7 +78,7 @@ async function startScrollAndTTS(text) {
     const duration = audioEl.duration;
 
     newsEl.style.animation = "none";
-    newsEl.offsetHeight;
+    newsEl.offsetHeight; // 리플로우
     newsEl.style.animation = `scroll ${duration}s linear 1`;
 
     // 1초 지연 후 TTS 재생
