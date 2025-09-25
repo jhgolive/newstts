@@ -1,10 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const xml2js = require("xml2js");
-const fs = require("fs");
-const path = require("path");
-const say = require("say");
-const ffmpeg = require("fluent-ffmpeg");
+const gtts = require("google-tts-api");
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -65,27 +62,19 @@ app.get("/news", (req, res) => {
   res.json({ news: lastNews });
 });
 
-// TTS mp3 생성
+// TTS mp3 URL 제공
 app.get("/tts", (req, res) => {
   try {
     const text = lastNews || "뉴스 로딩 중...";
-    const tempWav = path.join(__dirname, "news.wav");
-    const filePath = path.join(__dirname, "news.mp3");
-
-    say.export(text, null, 1.0, tempWav, (err) => {
-      if (err) return res.status(500).send("TTS 실패");
-
-      ffmpeg(tempWav)
-        .output(filePath)
-        .on("end", () => {
-          fs.unlinkSync(tempWav);
-          res.sendFile(filePath);
-        })
-        .on("error", (err) => res.status(500).send("mp3 변환 실패"))
-        .run();
+    const url = gtts.getAudioUrl(text, {
+      lang: 'ko',
+      slow: false,
+      host: 'https://translate.google.com'
     });
+    res.redirect(url); // 클라이언트는 mp3 자동 재생 가능
   } catch (err) {
-    res.status(500).send("서버 오류");
+    console.error(err);
+    res.status(500).send("TTS 실패");
   }
 });
 
