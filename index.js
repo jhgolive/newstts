@@ -1,16 +1,15 @@
 import express from "express";
 import cors from "cors";
 import xml2js from "xml2js";
-import fs from "fs";
-import path from "path";
-import say from "say";
 import fetch from "node-fetch";
+import path from "path";
+import googleTTS from "google-tts-api";
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 
 app.use(cors());
-app.use(express.static("public")); // 클라이언트 정적 파일 제공
+app.use(express.static("public")); // 정적 파일 제공
 
 let lastNews = "뉴스 로딩 중...";
 const parser = new xml2js.Parser({ explicitArray: false });
@@ -60,22 +59,15 @@ app.get("/news", (req, res) => {
   res.json({ news: lastNews });
 });
 
-// TTS mp3 생성
+// TTS mp3 제공 (google-tts-api URL 리다이렉트)
 app.get("/news-tts", async (req, res) => {
   try {
-    const fileName = "news.mp3";
-    const filePath = path.join(process.cwd(), fileName);
-
-    await new Promise((resolve, reject) => {
-      say.export(lastNews, null, 1.0, filePath, (err) => {
-        if (err) return reject(err);
-        resolve();
-      });
+    const url = googleTTS.getAudioUrl(lastNews, {
+      lang: "ko",
+      slow: false,
+      host: "https://translate.google.com",
     });
-
-    res.setHeader("Content-Type", "audio/mpeg");
-    res.setHeader("Content-Disposition", "inline; filename=news.mp3");
-    fs.createReadStream(filePath).pipe(res);
+    res.redirect(url);
   } catch (err) {
     console.error("TTS 생성 실패", err);
     res.status(500).send("TTS 생성 실패 😢");
@@ -83,11 +75,6 @@ app.get("/news-tts", async (req, res) => {
 });
 
 // 루트
-app.get("/", (req, res) => {
-  res.sendFile(path.join(process.cwd(), "public/index.html"));
-});
+app.get("/", (req, res) => res.sendFile(path.join(process.cwd(), "public/index.html")));
 
-// 서버 시작
-app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
-}).on('error', (err) => console.error("Server failed to start:", err));
+app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
