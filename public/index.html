@@ -107,13 +107,13 @@ async function playTTS() {
 
     let index = 0;
 
-    audioEl.src = `${data.urls[index]}?autoplay=1&mute=0`;
+    audioEl.src = `${data.urls[index]}&autoplay=1&mute=0`;
     audioEl.play();
 
     audioEl.onended = () => {
       index++;
       if (index < data.urls.length) {
-        audioEl.src = `${data.urls[index]}?autoplay=1&mute=0`;
+        audioEl.src = `${data.urls[index]}&autoplay=1&mute=0`;
         audioEl.play();
       }
     };
