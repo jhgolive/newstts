@@ -59,15 +59,21 @@ app.get("/news", (req, res) => {
   res.json({ news: lastNews });
 });
 
-// TTS mp3 제공 (google-tts-api URL 리다이렉트)
+// TTS mp3 제공 (긴 뉴스도 지원)
 app.get("/news-tts", async (req, res) => {
   try {
-    const url = googleTTS.getAudioUrl(lastNews, {
+    const text = lastNews;
+
+    // 긴 텍스트 분할 URL 생성
+    const urls = googleTTS.getAllAudioUrls(text, {
       lang: "ko",
       slow: false,
-      host: "https://translate.google.com",
+      host: "https://translate.google.com"
     });
-    res.redirect(url);
+
+    // 첫 번째 URL 반환 (클라이언트에서 순차 재생 가능)
+    res.json({ urls: urls.map(u => u.url) });
+
   } catch (err) {
     console.error("TTS 생성 실패", err);
     res.status(500).send("TTS 생성 실패 😢");
