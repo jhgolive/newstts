@@ -1,50 +1,47 @@
-// index.js
-import express from "express";
-import cors from "cors";
-import xml2js from "xml2js";
-import gtts from "google-tts-api";
-import fetch from "node-fetch";
+const express = require("express");
+const cors = require("cors");
+const xml2js = require("xml2js");
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// ✅ CORS 설정 (GitHub Pages 허용)
-app.use(cors({
-  origin: "https://jhgolive.github.io",
-  methods: ["GET"]
-}));
-
-// 혹시 cors()가 무시될 경우 대비
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "https://jhgolive.github.io");
-  res.header("Access-Control-Allow-Methods", "GET");
-  next();
-});
+app.use(cors());
 
 let lastNews = "뉴스 로딩 중...";
+
+// xml2js parser 준비
 const parser = new xml2js.Parser({ explicitArray: false });
 
-// 가져올 RSS 카테고리
-const CATEGORY_RSS = [
-  "https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko",
-  "https://news.google.com/rss/topics/CAAqIQgKIhtDQkFTRGdvSUwyMHZNRFp4WkRNU0FtdHZLQUFQAQ?hl=ko&gl=KR&ceid=KR:ko",
-  "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx1YlY4U0FtdHZHZ0pMVWlnQVAB?hl=ko&gl=KR&ceid=KR:ko",
-  "https://news.google.com/rss/topics/CAAqKAgKIiJDQkFTRXdvTkwyY3ZNVEZpWXpaM2FHNHhiaElDYTI4b0FBUAE?hl=ko&gl=KR&ceid=KR:ko",
-  "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx6TVdZU0FtdHZHZ0pMVWlnQVAB?hl=ko&gl=KR&ceid=KR:ko",
-  "https://news.google.com/rss/topics/CAAqKAgKIiJDQkFTRXdvSkwyMHZNR1ptZHpWbUVnSnJieG9DUzFJb0FBUAE?hl=ko&gl=KR&ceid=KR:ko",
-  "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNREpxYW5RU0FtdHZHZ0pMVWlnQVAB?hl=ko&gl=KR&ceid=KR:ko",
-  "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRFp1ZEdvU0FtdHZHZ0pMVWlnQVAB?hl=ko&gl=KR&ceid=KR:ko",
-  "https://news.google.com/rss/topics/CAAqIQgKIhtDQkFTRGdvSUwyMHZNR3QwTlRFU0FtdHZLQUFQAQ?hl=ko&gl=KR&ceid=KR:ko"
+// 제외할 카테고리 ID
+const EXCLUDE_CATEGORIES = [
+  "https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko", // 헤드라인
+  "https://news.google.com/rss/topics/CAAqIQgKIhtDQkFTRGdvSUwyMHZNRFp4WkRNU0FtdHZLQUFQAQ?hl=ko&gl=KR&ceid=KR:ko", //대한민국
+  "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx1YlY4U0FtdHZHZ0pMVWlnQVAB?hl=ko&gl=KR&ceid=KR:ko", //세계
+  "https://news.google.com/rss/topics/CAAqKAgKIiJDQkFTRXdvTkwyY3ZNVEZpWXpaM2FHNHhiaElDYTI4b0FBUAE?hl=ko&gl=KR&ceid=KR:ko", //지역/서울
+  "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx6TVdZU0FtdHZHZ0pMVWlnQVAB?hl=ko&gl=KR&ceid=KR:ko", //비즈니스
+  "https://news.google.com/rss/topics/CAAqKAgKIiJDQkFTRXdvSkwyMHZNR1ptZHpWbUVnSnJieG9DUzFJb0FBUAE?hl=ko&gl=KR&ceid=KR:ko", //과학/기술
+  "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNREpxYW5RU0FtdHZHZ0pMVWlnQVAB?hl=ko&gl=KR&ceid=KR:ko", //엔터테인먼트
+  "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRFp1ZEdvU0FtdHZHZ0pMVWlnQVAB?hl=ko&gl=KR&ceid=KR:ko", //스포츠
+  "https://news.google.com/rss/topics/CAAqIQgKIhtDQkFTRGdvSUwyMHZNR3QwTlRFU0FtdHZLQUFQAQ?hl=ko&gl=KR&ceid=KR:ko" //건강
 ];
 
-// ✅ RSS fetch with timeout
+// 가져올 카테고리 RSS URL (IT/과학, 스포츠 제외)
+const CATEGORY_RSS = [
+  "https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko", // 헤드라인
+  "https://news.google.com/rss/topics/CAAqIQgKIhtDQkFTRGdvSUwyMHZNRFp4WkRNU0FtdHZLQUFQAQ?hl=ko&gl=KR&ceid=KR:ko", //대한민국
+  "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx1YlY4U0FtdHZHZ0pMVWlnQVAB?hl=ko&gl=KR&ceid=KR:ko", //세계
+  "https://news.google.com/rss/topics/CAAqKAgKIiJDQkFTRXdvTkwyY3ZNVEZpWXpaM2FHNHhiaElDYTI4b0FBUAE?hl=ko&gl=KR&ceid=KR:ko", //지역/서울
+  "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx6TVdZU0FtdHZHZ0pMVWlnQVAB?hl=ko&gl=KR&ceid=KR:ko", //비즈니스
+  "https://news.google.com/rss/topics/CAAqKAgKIiJDQkFTRXdvSkwyMHZNR1ptZHpWbUVnSnJieG9DUzFJb0FBUAE?hl=ko&gl=KR&ceid=KR:ko", //과학/기술
+  "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNREpxYW5RU0FtdHZHZ0pMVWlnQVAB?hl=ko&gl=KR&ceid=KR:ko", //엔터테인먼트
+  "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRFp1ZEdvU0FtdHZHZ0pMVWlnQVAB?hl=ko&gl=KR&ceid=KR:ko", //스포츠
+  "https://news.google.com/rss/topics/CAAqIQgKIhtDQkFTRGdvSUwyMHZNR3QwTlRFU0FtdHZLQUFQAQ?hl=ko&gl=KR&ceid=KR:ko" //건강
+];
+
+// RSS 하나를 fetch + parse
 async function fetchRSS(url) {
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000); // 5초 타임아웃
-    const res = await fetch(url, { signal: controller.signal });
-    clearTimeout(timeout);
-
+    const res = await fetch(url);
     if (!res.ok) throw new Error(`RSS fetch failed: ${res.status}`);
     const xml = await res.text();
     const result = await parser.parseStringPromise(xml);
@@ -58,7 +55,7 @@ async function fetchRSS(url) {
   }
 }
 
-// ✅ 전체 뉴스 가져오기
+// 전체 뉴스 가져오기
 async function fetchAllNews() {
   try {
     const promises = CATEGORY_RSS.map(url => fetchRSS(url));
@@ -76,33 +73,16 @@ async function fetchAllNews() {
 fetchAllNews();
 setInterval(fetchAllNews, 600000);
 
-// ✅ /news 라우트
 app.get("/news", (req, res) => {
   res.json({ news: lastNews });
 });
 
-// ✅ /tts 라우트 (구글 TTS mp3 URL 리다이렉트)
-app.get("/tts", (req, res) => {
-  try {
-    const text = lastNews || "뉴스 로딩 중...";
-    const url = gtts.getAudioUrl(text, {
-      lang: "ko",
-      slow: false,
-      host: "https://translate.google.com"
-    });
-    res.redirect(url);
-  } catch (err) {
-    console.error("TTS 실패", err);
-    res.status(500).send("TTS 실패");
-  }
-});
-
-// ✅ 기본 루트
 app.get("/", (req, res) => {
   res.send("Server is running 🚀");
 });
 
-// 서버 실행
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
 });
+
+
