@@ -1,6 +1,10 @@
 const express = require("express");
 const cors = require("cors");
 const xml2js = require("xml2js");
+const fs = require("fs");
+const path = require("path");
+const say = require("say");
+const fetch = require("node-fetch"); // node-fetch 설치 필요
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -8,37 +12,16 @@ const PORT = process.env.PORT || 8080;
 app.use(cors());
 
 let lastNews = "뉴스 로딩 중...";
-
-// xml2js parser 준비
 const parser = new xml2js.Parser({ explicitArray: false });
 
-// 제외할 카테고리 ID
-const EXCLUDE_CATEGORIES = [
-  "https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko", // 헤드라인
-  "https://news.google.com/rss/topics/CAAqIQgKIhtDQkFTRGdvSUwyMHZNRFp4WkRNU0FtdHZLQUFQAQ?hl=ko&gl=KR&ceid=KR:ko", //대한민국
-  "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx1YlY4U0FtdHZHZ0pMVWlnQVAB?hl=ko&gl=KR&ceid=KR:ko", //세계
-  "https://news.google.com/rss/topics/CAAqKAgKIiJDQkFTRXdvTkwyY3ZNVEZpWXpaM2FHNHhiaElDYTI4b0FBUAE?hl=ko&gl=KR&ceid=KR:ko", //지역/서울
-  "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx6TVdZU0FtdHZHZ0pMVWlnQVAB?hl=ko&gl=KR&ceid=KR:ko", //비즈니스
-  "https://news.google.com/rss/topics/CAAqKAgKIiJDQkFTRXdvSkwyMHZNR1ptZHpWbUVnSnJieG9DUzFJb0FBUAE?hl=ko&gl=KR&ceid=KR:ko", //과학/기술
-  "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNREpxYW5RU0FtdHZHZ0pMVWlnQVAB?hl=ko&gl=KR&ceid=KR:ko", //엔터테인먼트
-  "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRFp1ZEdvU0FtdHZHZ0pMVWlnQVAB?hl=ko&gl=KR&ceid=KR:ko", //스포츠
-  "https://news.google.com/rss/topics/CAAqIQgKIhtDQkFTRGdvSUwyMHZNR3QwTlRFU0FtdHZLQUFQAQ?hl=ko&gl=KR&ceid=KR:ko" //건강
-];
-
-// 가져올 카테고리 RSS URL (IT/과학, 스포츠 제외)
+// 가져올 RSS URL
 const CATEGORY_RSS = [
   "https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko", // 헤드라인
-  "https://news.google.com/rss/topics/CAAqIQgKIhtDQkFTRGdvSUwyMHZNRFp4WkRNU0FtdHZLQUFQAQ?hl=ko&gl=KR&ceid=KR:ko", //대한민국
-  "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx1YlY4U0FtdHZHZ0pMVWlnQVAB?hl=ko&gl=KR&ceid=KR:ko", //세계
-  "https://news.google.com/rss/topics/CAAqKAgKIiJDQkFTRXdvTkwyY3ZNVEZpWXpaM2FHNHhiaElDYTI4b0FBUAE?hl=ko&gl=KR&ceid=KR:ko", //지역/서울
-  "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx6TVdZU0FtdHZHZ0pMVWlnQVAB?hl=ko&gl=KR&ceid=KR:ko", //비즈니스
-  "https://news.google.com/rss/topics/CAAqKAgKIiJDQkFTRXdvSkwyMHZNR1ptZHpWbUVnSnJieG9DUzFJb0FBUAE?hl=ko&gl=KR&ceid=KR:ko", //과학/기술
-  "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNREpxYW5RU0FtdHZHZ0pMVWlnQVAB?hl=ko&gl=KR&ceid=KR:ko", //엔터테인먼트
-  "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRFp1ZEdvU0FtdHZHZ0pMVWlnQVAB?hl=ko&gl=KR&ceid=KR:ko", //스포츠
-  "https://news.google.com/rss/topics/CAAqIQgKIhtDQkFTRGdvSUwyMHZNR3QwTlRFU0FtdHZLQUFQAQ?hl=ko&gl=KR&ceid=KR:ko" //건강
+  "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx1YlY4U0FtdHZHZ0pMVWlnQVAB?hl=ko&gl=KR&ceid=KR:ko" // 대한민국
+  // 필요하면 추가
 ];
 
-// RSS 하나를 fetch + parse
+// RSS fetch + parse
 async function fetchRSS(url) {
   try {
     const res = await fetch(url);
@@ -73,6 +56,28 @@ async function fetchAllNews() {
 fetchAllNews();
 setInterval(fetchAllNews, 600000);
 
+// TTS mp3 생성
+app.get("/news-tts", async (req, res) => {
+  try {
+    const fileName = "news.mp3";
+    const filePath = path.join(__dirname, fileName);
+
+    await new Promise((resolve, reject) => {
+      say.export(lastNews, null, 1.0, filePath, (err) => {
+        if (err) return reject(err);
+        resolve();
+      });
+    });
+
+    res.setHeader("Content-Type", "audio/mpeg");
+    res.setHeader("Content-Disposition", "inline; filename=news.mp3");
+    fs.createReadStream(filePath).pipe(res);
+  } catch (err) {
+    console.error("TTS 생성 실패", err);
+    res.status(500).send("TTS 생성 실패 😢");
+  }
+});
+
 app.get("/news", (req, res) => {
   res.json({ news: lastNews });
 });
@@ -84,5 +89,3 @@ app.get("/", (req, res) => {
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
 });
-
-
