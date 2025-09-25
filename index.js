@@ -74,7 +74,7 @@ app.get("/news-tts", async (req, res) => {
   try {
     const request = {
       input: { text: lastNews },
-      voice: { languageCode: "ko-KR", ssmlGender: "FEMALE" },
+      voice: { languageCode: "ko-KR", name: "ko-KR-Standard-A", ssmlGender: "FEMALE" },
       audioConfig: { audioEncoding: "MP3" },
     };
     const [response] = await ttsClient.synthesizeSpeech(request);
