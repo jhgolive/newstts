@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>뉴스</title>
+<title>뉴스음성</title>
 <style>
   body {
     margin: 0;
@@ -92,10 +92,10 @@ async function startScrollAndTTS(text) {
     newsEl.offsetHeight; // 리플로우 강제
     newsEl.style.animation = `scroll ${duration}s linear 1`;
 
-    // 2초 딜레이 후 TTS 재생
+    // 3초 딜레이 후 TTS 재생
     setTimeout(() => {
       audioEl.play().catch(err => console.warn(err));
-    }, 2000);
+    }, 3000);
   };
 
   // 스크롤 끝나면 다음 뉴스
