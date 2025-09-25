@@ -3,6 +3,8 @@ import express from "express";
 import cors from "cors";
 import xml2js from "xml2js";
 import gtts from "google-tts-api";
+import fetch from "node-fetch";
+
 
 const app = express();
 const PORT = process.env.PORT || 8080;
