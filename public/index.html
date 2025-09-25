@@ -32,9 +32,7 @@
   </div>
 
   <script>
-    // ✅ Railway 서버 주소 입력
     const API_URL = "https://proxy2-production-fe60.up.railway.app"; 
-
     const newsEl = document.getElementById("news");
     let animationFrame;
     let pos = window.innerWidth;
@@ -45,10 +43,11 @@
         const data = await res.json();
         if (data.news) {
           startScroll(data.news);
-          playTTS(); // 음성 자동 실행
+          playTTS();
         }
       } catch (err) {
         console.error("뉴스 불러오기 실패", err);
+        setTimeout(loadNews, 5000); // 실패 시 5초 후 재시도
       }
     }
 
@@ -60,9 +59,9 @@
     }
 
     function scrollStep() {
-      pos -= 2; // 스크롤 속도
+      pos -= 2;
       if (pos < -newsEl.offsetWidth) {
-        loadNews(); // 한 줄 끝나면 새로운 뉴스
+        loadNews();
         return;
       }
       newsEl.style.transform = `translateX(${pos}px)`;
