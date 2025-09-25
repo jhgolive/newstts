@@ -2,102 +2,66 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>뉴스</title>
+<title>뉴스 스크롤</title>
 <style>
-  body { margin: 0; background: transparent; overflow: hidden; }
-  #wrapper {
-    white-space: nowrap;
+  body {
+    margin: 0;
+    background: black;
+    color: white;
+    font-size: 28px;
+    font-weight: bold;
     overflow: hidden;
+  }
+  #newsWrapper {
     position: fixed;
     top: 0;
-    left: 0;
-    transform: translateY(-8px);
-    width: 100vw;
-    height: 40px;
-    z-index: 9999;
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
   }
   #news {
     display: inline-block;
-    font-size: 28px;
-    color: white;
-    font-weight: bold;
-    text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black,
-                 -1px -1px black, -1px 1px black, 1px -1px black, 1px 1px black;
-    will-change: transform;
-    backface-visibility: hidden;
-    position: absolute;
-    top: 0;
-    white-space: nowrap;
+    padding-left: 100%;
+    animation: scroll 20s linear infinite;
   }
-  @keyframes scroll { from { transform: translateX(100vw); } to { transform: translateX(-100%); } }
+  @keyframes scroll {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-100%); }
+  }
 </style>
 </head>
 <body>
-<div id="wrapper">
+<div id="newsWrapper">
   <div id="news">뉴스 로딩 중...</div>
 </div>
 
-<audio id="ttsAudio" autoplay></audio>
-
 <script>
-const newsEl = document.getElementById("news");
-const audioEl = document.getElementById("ttsAudio");
-const API_URL = window.location.origin + "https://proxy2-production-b5a7.up.railway.app/news";
-const TTS_URL = window.location.origin + "https://proxy2-production-b5a7.up.railway.app/news-tts";
-
-let pendingNews = null;
-
-// 뉴스 가져오기
 async function loadNews() {
+  const newsEl = document.getElementById("news");
   try {
-    const res = await fetch(API_URL);
-    const data = await res.json();
+    const response = await fetch("https://proxy2-production-b5a7.up.railway.app/news");
+    if (!response.ok) throw new Error("뉴스 불러오기 실패");
+    const data = await response.json();
+
+    // 예: data가 { news: "뉴스1 | 뉴스2 | 뉴스3" } 형식이라 가정
     if (data.news) {
-      pendingNews = data.news;
-      startScroll(pendingNews);
-      playTTS();
+      newsEl.textContent = data.news;
+    } else {
+      newsEl.textContent = "뉴스 데이터가 없습니다.";
     }
-  } catch (err) { console.error("뉴스 불러오기 실패", err); }
+
+    // 애니메이션 다시 시작
+    newsEl.style.animation = "none";
+    newsEl.offsetHeight; // reflow
+    newsEl.style.animation = "scroll 20s linear infinite";
+
+  } catch (err) {
+    console.error("뉴스 불러오기 실패", err);
+    newsEl.textContent = "뉴스 불러오기 실패";
+  }
 }
 
-// 스크롤 시작
-function startScroll(text) {
-  newsEl.textContent = text;
-  const wrapperWidth = newsEl.parentElement.offsetWidth;
-  const textWidth = newsEl.offsetWidth;
-  const speed = 100; // px/sec
-  const duration = (wrapperWidth + textWidth) / speed;
-  newsEl.style.animation = "none";
-  newsEl.offsetHeight;
-  newsEl.style.animation = `scroll linear ${duration}s 1`;
-  newsEl.addEventListener("animationend", function handler() {
-    newsEl.removeEventListener("animationend", handler);
-    loadNews();
-  });
-}
-
-// 긴 뉴스 TTS 자동 재생
-async function playTTS() {
-  try {
-    const res = await fetch(TTS_URL);
-    const data = await res.json();
-    const urls = data.urls;
-    if (!urls || urls.length === 0) return;
-
-    let index = 0;
-    audioEl.src = urls[index];
-    audioEl.play();
-
-    audioEl.onended = () => {
-      index++;
-      if (index < urls.length) {
-        audioEl.src = urls[index];
-        audioEl.play();
-      }
-    };
-  } catch (err) { console.error("TTS 재생 실패", err); }
-}
-
+// 페이지 로드 후 뉴스 불러오기
 window.addEventListener("load", loadNews);
 </script>
 </body>
