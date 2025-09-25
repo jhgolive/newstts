@@ -8,6 +8,7 @@
   "dependencies": {
     "express": "^4.18.2",
     "cors": "^2.8.5",
-    "xml2js": "^0.4.23"
+    "xml2js": "^0.4.23",
+    "google-tts-api": "^2.0.1"
   }
 }
