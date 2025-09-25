@@ -12,17 +12,16 @@ const PORT = process.env.PORT || 8080;
 app.use(cors());
 app.use(express.static("public"));
 
-let lastNews = "뉴스 로딩 중...";
-const parser = new xml2js.Parser({ explicitArray: false });
-
-// ✅ 클라우드 환경용: 환경변수 GOOGLE_CREDENTIALS 사용
+// Google Cloud 인증
 if (process.env.GOOGLE_CREDENTIALS) {
   fs.writeFileSync("/tmp/google-credentials.json", process.env.GOOGLE_CREDENTIALS);
   process.env.GOOGLE_APPLICATION_CREDENTIALS = "/tmp/google-credentials.json";
 }
 
-// Google Cloud TTS 클라이언트
 const ttsClient = new textToSpeech.TextToSpeechClient();
+
+let lastNews = "뉴스 로딩 중...";
+const parser = new xml2js.Parser({ explicitArray: false });
 
 // 제외할 카테고리 ID
 const EXCLUDE_CATEGORIES = [
@@ -50,7 +49,7 @@ const CATEGORY_RSS = [
   "https://news.google.com/rss/topics/CAAqIQgKIhtDQkFTRGdvSUwyMHZNR3QwTlRFU0FtdHZLQUFQAQ?hl=ko&gl=KR&ceid=KR:ko" //건강
 ];
 
-// RSS fetch + parse
+// RSS fetch
 async function fetchRSS(url) {
   try {
     const res = await fetch(url);
@@ -67,7 +66,7 @@ async function fetchRSS(url) {
   }
 }
 
-// 전체 뉴스 가져오기
+// 전체 뉴스
 async function fetchAllNews() {
   try {
     const promises = CATEGORY_RSS.map(url => fetchRSS(url));
@@ -81,33 +80,54 @@ async function fetchAllNews() {
   }
 }
 
-// 초기 로드 + 50분마다 갱신
+// 초기 + 50분마다 갱신
 fetchAllNews();
 setInterval(fetchAllNews, 3000000);
+
+// 텍스트를 4500바이트 이하로 쪼개기
+function splitTextForTTS(text, maxBytes = 4500) {
+  const parts = [];
+  let current = "";
+  for (const word of text.split(" ")) {
+    if (Buffer.byteLength(current + " " + word, "utf-8") > maxBytes) {
+      parts.push(current);
+      current = word;
+    } else {
+      current += (current ? " " : "") + word;
+    }
+  }
+  if (current) parts.push(current);
+  return parts;
+}
 
 // 뉴스 JSON
 app.get("/news", (req, res) => {
   res.json({ news: lastNews });
 });
 
-// Google Cloud TTS
+// Google TTS (분할 + 합치기)
 app.get("/news-tts", async (req, res) => {
   try {
-    const request = {
-      input: { text: lastNews },
-      voice: { languageCode: "ko-KR", name: "ko-KR-Standard-A", ssmlGender: "FEMALE" },
-      audioConfig: { audioEncoding: "MP3" },
-    };
-    const [response] = await ttsClient.synthesizeSpeech(request);
+    const chunks = splitTextForTTS(lastNews);
+    const buffers = [];
 
+    for (const chunk of chunks) {
+      const [response] = await ttsClient.synthesizeSpeech({
+        input: { text: chunk },
+        voice: { languageCode: "ko-KR", name: "ko-KR-Standard-A", ssmlGender: "FEMALE" },
+        audioConfig: { audioEncoding: "MP3" },
+      });
+      buffers.push(response.audioContent);
+    }
+
+    const merged = Buffer.concat(buffers);
     res.set({
       "Content-Type": "audio/mpeg",
-      "Content-Length": response.audioContent.length,
+      "Content-Length": merged.length,
     });
-    res.send(response.audioContent);
-
+    res.send(merged);
   } catch (err) {
-    console.error("Google Cloud TTS 실패", err);
+    console.error("TTS 생성 실패", err);
     res.status(500).send("TTS 생성 실패 😢");
   }
 });
