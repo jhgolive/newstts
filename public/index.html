@@ -46,7 +46,7 @@
 </style>
 </head>
 <body>
-333<div id="wrapper">
+444<div id="wrapper">
   <div id="news">뉴스 로딩 중...</div>
 </div>
 
@@ -100,7 +100,7 @@ async function startScrollAndTTS(text) {
     setTimeout(() => {
         audioEl.muted = true;  // autoplay 위해 잠시 muted
         audioEl.play().then(() => audioEl.muted = false).catch(err => console.warn(err));
-    }, 5000);
+    }, 10000);
   };
 
   newsEl.addEventListener("animationend", function handler() {
