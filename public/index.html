@@ -50,10 +50,14 @@
   <div id="news">뉴스 로딩 중...</div>
 </div>
 
+<audio id="ttsAudio" autoplay playsinline></audio>
+
 <script>
 const newsEl = document.getElementById("news");
-const NEWS_API = "https://proxy2-production-b5a7.up.railway.app/news";
-const TTS_API = "https://proxy2-production-b5a7.up.railway.app/news-tts";
+const audioEl = document.getElementById("ttsAudio");
+
+const NEWS_API = "/news";
+const TTS_API = "/news-tts";
 
 let pendingNews = null;
 
@@ -65,7 +69,7 @@ async function loadNews() {
     if (data.news) {
       pendingNews = data.news;
       startScroll(pendingNews);
-      playTTS(pendingNews);
+      playTTS();
     }
   } catch (err) {
     console.error("뉴스 불러오기 실패", err);
@@ -86,7 +90,7 @@ function startScroll(text) {
   newsEl.addEventListener("animationend", function handler() {
     newsEl.removeEventListener("animationend", handler);
     pendingNews = null;
-    loadNews(); // 끝나면 서버 갱신
+    loadNews(); // 한 바퀴 끝나면 서버 갱신
   });
 
   newsEl.style.animation = "none";
@@ -94,26 +98,25 @@ function startScroll(text) {
   newsEl.style.animation = `scroll linear ${duration}s 1`;
 }
 
-// TTS 재생 (긴 뉴스 순차 재생)
-async function playTTS(text) {
+// TTS 재생 (자동재생용 URL에 autoplay=1&mute=0 적용)
+async function playTTS() {
   try {
     const res = await fetch(TTS_API);
     const data = await res.json();
-    if (!data.urls || !data.urls.length) return;
+    if (!data.urls || data.urls.length === 0) return;
 
     let index = 0;
-    const audio = new Audio();
 
-    audio.addEventListener("ended", () => {
+    audioEl.src = `${data.urls[index]}?autoplay=1&mute=0`;
+    audioEl.play();
+
+    audioEl.onended = () => {
       index++;
       if (index < data.urls.length) {
-        audio.src = data.urls[index];
-        audio.play();
+        audioEl.src = `${data.urls[index]}?autoplay=1&mute=0`;
+        audioEl.play();
       }
-    });
-
-    audio.src = data.urls[index];
-    audio.play();
+    };
   } catch (err) {
     console.error("TTS 재생 실패", err);
   }
