@@ -43,20 +43,6 @@
     from { transform: translateX(100vw); }
     to { transform: translateX(-100%); }
   }
-
-  #playBtn {
-    position: fixed;
-    bottom: 20px;
-    left: 20px;
-    z-index: 10000;
-    padding: 10px 20px;
-    background: red;
-    color: white;
-    font-weight: bold;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-  }
 </style>
 </head>
 <body>
@@ -64,14 +50,12 @@
   <div id="news">뉴스 로딩 중...</div>
 </div>
 
-<!-- 처음에는 무음 autoplay -->
-<audio id="ttsAudio" autoplay muted playsinline></audio>
-<button id="playBtn">🔊 소리 켜기</button>
+<!-- 자동재생 TTS -->
+<audio id="ttsAudio" autoplay playsinline></audio>
 
 <script>
 const newsEl = document.getElementById("news");
 const audioEl = document.getElementById("ttsAudio");
-const playBtn = document.getElementById("playBtn");
 
 const NEWS_API = "https://proxy2-production-b5a7.up.railway.app/news";
 const TTS_API = "https://proxy2-production-b5a7.up.railway.app/news-tts";
@@ -115,22 +99,17 @@ function startScroll(text) {
   newsEl.style.animation = `scroll linear ${duration}s 1`;
 }
 
-// TTS 재생 (서버에서 합쳐진 mp3 제공)
+// TTS 자동재생
 async function playTTS() {
   try {
-    audioEl.src = TTS_API; // 단일 mp3 스트리밍
-    await audioEl.play().catch(err => console.warn("자동재생 차단됨:", err));
+    audioEl.src = TTS_API;
+    audioEl.muted = true;       // autoplay 위해 muted 먼저 켬
+    await audioEl.play();
+    audioEl.muted = false;      // 재생 시작 후 음소거 해제
   } catch (err) {
     console.error("TTS 재생 실패", err);
   }
 }
-
-// 사용자 터치 시 소리 켜기 (유튜브처럼)
-playBtn.addEventListener("click", () => {
-  audioEl.muted = false;
-  audioEl.play().catch(err => console.error("재생 실패:", err));
-  playBtn.style.display = "none"; // 버튼 숨기기
-});
 
 // 초기 실행
 loadNews();
