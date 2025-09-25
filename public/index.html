@@ -115,24 +115,11 @@ function startScroll(text) {
   newsEl.style.animation = `scroll linear ${duration}s 1`;
 }
 
-// TTS 재생 (URL에 autoplay=1&mute=0 붙이지 않음)
+// TTS 재생 (서버에서 합쳐진 mp3 제공)
 async function playTTS() {
   try {
-    const res = await fetch(TTS_API);
-    const data = await res.json();
-    if (!data.urls || data.urls.length === 0) return;
-
-    let index = 0;
-    audioEl.src = data.urls[index];
-    audioEl.play().catch(err => console.warn("자동재생 차단됨:", err));
-
-    audioEl.onended = () => {
-      index++;
-      if (index < data.urls.length) {
-        audioEl.src = data.urls[index];
-        audioEl.play();
-      }
-    };
+    audioEl.src = TTS_API; // 단일 mp3 스트리밍
+    await audioEl.play().catch(err => console.warn("자동재생 차단됨:", err));
   } catch (err) {
     console.error("TTS 재생 실패", err);
   }
