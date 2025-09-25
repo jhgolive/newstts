@@ -3,41 +3,23 @@ import cors from "cors";
 import xml2js from "xml2js";
 import fetch from "node-fetch";
 import path from "path";
-import googleTTS from "google-tts-api";
+import textToSpeech from "@google-cloud/text-to-speech";
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 
 app.use(cors());
-app.use(express.static("public")); // 정적 파일 제공
+app.use(express.static("public"));
 
 let lastNews = "뉴스 로딩 중...";
 const parser = new xml2js.Parser({ explicitArray: false });
 
-// 제외할 카테고리 ID
-const EXCLUDE_CATEGORIES = [
-  "https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko", // 헤드라인
-  "https://news.google.com/rss/topics/CAAqIQgKIhtDQkFTRGdvSUwyMHZNRFp4WkRNU0FtdHZLQUFQAQ?hl=ko&gl=KR&ceid=KR:ko", //대한민국
-  "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx1YlY4U0FtdHZHZ0pMVWlnQVAB?hl=ko&gl=KR&ceid=KR:ko", //세계
-  "https://news.google.com/rss/topics/CAAqKAgKIiJDQkFTRXdvTkwyY3ZNVEZpWXpaM2FHNHhiaElDYTI4b0FBUAE?hl=ko&gl=KR&ceid=KR:ko", //지역/서울
-  "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx6TVdZU0FtdHZHZ0pMVWlnQVAB?hl=ko&gl=KR&ceid=KR:ko", //비즈니스
-  "https://news.google.com/rss/topics/CAAqKAgKIiJDQkFTRXdvSkwyMHZNR1ptZHpWbUVnSnJieG9DUzFJb0FBUAE?hl=ko&gl=KR&ceid=KR:ko", //과학/기술
-  "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNREpxYW5RU0FtdHZHZ0pMVWlnQVAB?hl=ko&gl=KR&ceid=KR:ko", //엔터테인먼트
-  "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRFp1ZEdvU0FtdHZHZ0pMVWlnQVAB?hl=ko&gl=KR&ceid=KR:ko", //스포츠
-  "https://news.google.com/rss/topics/CAAqIQgKIhtDQkFTRGdvSUwyMHZNR3QwTlRFU0FtdHZLQUFQAQ?hl=ko&gl=KR&ceid=KR:ko" //건강
-];
+// Google Cloud TTS 클라이언트
+const ttsClient = new textToSpeech.TextToSpeechClient();
 
-// 가져올 카테고리 RSS URL (IT/과학, 스포츠 제외)
+// 카테고리 RSS URL (원하는 카테고리로 조정)
 const CATEGORY_RSS = [
-  "https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko", // 헤드라인
-  "https://news.google.com/rss/topics/CAAqIQgKIhtDQkFTRGdvSUwyMHZNRFp4WkRNU0FtdHZLQUFQAQ?hl=ko&gl=KR&ceid=KR:ko", //대한민국
-  "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx1YlY4U0FtdHZHZ0pMVWlnQVAB?hl=ko&gl=KR&ceid=KR:ko", //세계
-  "https://news.google.com/rss/topics/CAAqKAgKIiJDQkFTRXdvTkwyY3ZNVEZpWXpaM2FHNHhiaElDYTI4b0FBUAE?hl=ko&gl=KR&ceid=KR:ko", //지역/서울
-  "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx6TVdZU0FtdHZHZ0pMVWlnQVAB?hl=ko&gl=KR&ceid=KR:ko", //비즈니스
-  "https://news.google.com/rss/topics/CAAqKAgKIiJDQkFTRXdvSkwyMHZNR1ptZHpWbUVnSnJieG9DUzFJb0FBUAE?hl=ko&gl=KR&ceid=KR:ko", //과학/기술
-  "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNREpxYW5RU0FtdHZHZ0pMVWlnQVAB?hl=ko&gl=KR&ceid=KR:ko", //엔터테인먼트
-  "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRFp1ZEdvU0FtdHZHZ0pMVWlnQVAB?hl=ko&gl=KR&ceid=KR:ko", //스포츠
-  "https://news.google.com/rss/topics/CAAqIQgKIhtDQkFTRGdvSUwyMHZNR3QwTlRFU0FtdHZLQUFQAQ?hl=ko&gl=KR&ceid=KR:ko" //건강
+  "https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko" // 헤드라인
 ];
 
 // RSS fetch + parse
@@ -80,37 +62,24 @@ app.get("/news", (req, res) => {
   res.json({ news: lastNews });
 });
 
-// 🎵 TTS mp3 직접 합쳐서 스트리밍
+// Google Cloud TTS
 app.get("/news-tts", async (req, res) => {
   try {
-    const text = lastNews;
-
-    // 구글 TTS 분할 URL 생성
-    const urls = googleTTS.getAllAudioUrls(text, {
-      lang: "ko",
-      slow: false,
-    });
-
-    // 각 조각을 fetch해서 Buffer로 변환
-    const parts = await Promise.all(
-      urls.map(async (u) => {
-        const r = await fetch(u.url);
-        const buf = await r.arrayBuffer();
-        return Buffer.from(buf);
-      })
-    );
-
-    // Buffer 합치기
-    const merged = Buffer.concat(parts);
+    const request = {
+      input: { text: lastNews },
+      voice: { languageCode: "ko-KR", ssmlGender: "FEMALE" },
+      audioConfig: { audioEncoding: "MP3" },
+    };
+    const [response] = await ttsClient.synthesizeSpeech(request);
 
     res.set({
       "Content-Type": "audio/mpeg",
-      "Content-Length": merged.length,
+      "Content-Length": response.audioContent.length,
     });
-    res.send(merged);
+    res.send(response.audioContent);
 
   } catch (err) {
-    console.error("TTS 생성 실패", err);
+    console.error("Google Cloud TTS 실패", err);
     res.status(500).send("TTS 생성 실패 😢");
   }
 });
