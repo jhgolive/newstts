@@ -4,12 +4,7 @@
 <meta charset="UTF-8">
 <title>뉴스</title>
 <style>
-  body {
-    margin: 0;
-    background: transparent;
-    overflow: hidden;
-  }
-
+  body { margin: 0; background: transparent; overflow: hidden; }
   #wrapper {
     white-space: nowrap;
     overflow: hidden;
@@ -21,7 +16,6 @@
     height: 40px;
     z-index: 9999;
   }
-
   #news {
     display: inline-block;
     font-size: 28px;
@@ -35,11 +29,7 @@
     top: 0;
     white-space: nowrap;
   }
-
-  @keyframes scroll {
-    from { transform: translateX(100vw); }
-    to { transform: translateX(-100%); }
-  }
+  @keyframes scroll { from { transform: translateX(100vw); } to { transform: translateX(-100%); } }
 </style>
 </head>
 <body>
@@ -52,8 +42,8 @@
 <script>
 const newsEl = document.getElementById("news");
 const audioEl = document.getElementById("ttsAudio");
-const API_URL = "http://localhost:8080/news";
-const TTS_URL = "http://localhost:8080/news-tts";
+const API_URL = "/news";
+const TTS_URL = "/news-tts";
 
 let pendingNews = null;
 
@@ -66,26 +56,21 @@ async function loadNews() {
       startScroll(pendingNews);
       playTTS();
     }
-  } catch (err) {
-    console.error("뉴스 불러오기 실패", err);
-  }
+  } catch (err) { console.error("뉴스 불러오기 실패", err); }
 }
 
 function startScroll(text) {
   newsEl.textContent = text;
-
   const wrapperWidth = newsEl.parentElement.offsetWidth;
   const textWidth = newsEl.offsetWidth;
   const speed = 100; // px/sec
   const duration = (wrapperWidth + textWidth) / speed;
-
   newsEl.style.animation = "none";
-  newsEl.offsetHeight; // 리플로우
+  newsEl.offsetHeight;
   newsEl.style.animation = `scroll linear ${duration}s 1`;
-
   newsEl.addEventListener("animationend", function handler() {
     newsEl.removeEventListener("animationend", handler);
-    loadNews(); // 한 바퀴 끝나면 서버 갱신
+    loadNews();
   });
 }
 
@@ -94,7 +79,6 @@ function playTTS() {
   audioEl.play().catch(err => console.warn("자동 재생 실패:", err));
 }
 
-// 페이지 로드 시 실행
 window.addEventListener("load", loadNews);
 </script>
 </body>
