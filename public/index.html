@@ -1,80 +1,105 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <title>실시간 뉴스 + 음성</title>
-  <style>
-    body {
-      margin: 0;
-      background: black;
-      overflow: hidden;
-      color: white;
-      font-size: 28px;
-      font-weight: bold;
-      text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
-    }
-    #wrapper {
-      white-space: nowrap;
-      overflow: hidden;
-      position: relative;
-      width: 100vw;
-      height: 40px;
-    }
-    #news {
-      display: inline-block;
-      padding-left: 100vw;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>뉴스</title>
+<style>
+  body {
+    margin: 0;
+    background: transparent;
+    overflow: hidden;
+  }
+
+  #wrapper {
+    white-space: nowrap;
+    overflow: hidden;
+    position: fixed;   /* 화면에 고정 */
+    top: 0;         /* 화면 상단 */
+    left: 0;
+    transform: translateY(-8px); /* 강제 위치 조정 */
+    width: 100vw;
+    height: 40px;
+    z-index: 9999;     /* 다른 요소보다 위에 */
+  }
+
+  #news {
+    display: inline-block;
+    font-size: 28px;
+    color: white;
+    font-weight: bold;
+    text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black, 
+                 -1px -1px black, -1px 1px black, 1px -1px black, 1px 1px black;
+    will-change: transform;
+    backface-visibility: hidden;
+    position: absolute;
+    top: 0;
+    white-space: nowrap;
+    animation-name: scroll;
+    animation-timing-function: linear;
+    animation-iteration-count: 1; /* 한 번만 실행 */
+  }
+
+  @keyframes scroll {
+    from { transform: translateX(100vw); }
+    to { transform: translateX(-100%); }
+  }
+</style>
 </head>
 <body>
-  <div id="wrapper">
-    <div id="news">뉴스 로딩 중...</div>
-  </div>
+<div id="wrapper">
+  <div id="news">뉴스 로딩 중...</div>
+</div>
 
-  <script>
-    const API_URL = "https://proxy2-production-fe60.up.railway.app"; 
-    const newsEl = document.getElementById("news");
-    let animationFrame;
-    let pos = window.innerWidth;
+<script>
+const newsEl = document.getElementById("news");
+const API_URL = "https://proxy-production-b9d6.up.railway.app/news";
 
-    async function loadNews() {
-      try {
-        const res = await fetch(API_URL + "/news");
-        const data = await res.json();
-        if (data.news) {
-          startScroll(data.news);
-          playTTS();
-        }
-      } catch (err) {
-        console.error("뉴스 불러오기 실패", err);
-        setTimeout(loadNews, 5000); // 실패 시 5초 후 재시도
-      }
+let pendingNews = null;
+
+// 뉴스 가져오기
+async function loadNews() {
+  try {
+    const res = await fetch(API_URL);
+    const data = await res.json();
+    if (data.news) {
+      pendingNews = data.news;
+      startScroll(pendingNews);
     }
+  } catch (err) {
+    console.error("뉴스 불러오기 실패", err);
+  }
+}
 
-    function startScroll(text) {
-      cancelAnimationFrame(animationFrame);
-      newsEl.textContent = text;
-      pos = window.innerWidth;
-      scrollStep();
+// CSS 애니메이션으로 스크롤
+function startScroll(text) {
+  newsEl.textContent = text;
+
+  // 텍스트 길이에 따라 애니메이션 시간 조절 (px/sec = 100)
+  const wrapperWidth = newsEl.parentElement.offsetWidth;
+  const textWidth = newsEl.offsetWidth;
+  const speed = 100; // px/sec
+  const duration = (wrapperWidth + textWidth) / speed;
+
+  newsEl.style.animationDuration = `${duration}s`;
+
+  // 애니메이션 끝나면 새 뉴스 있으면 다시 실행
+  newsEl.addEventListener("animationend", function handler() {
+    newsEl.removeEventListener("animationend", handler);
+    if (pendingNews) {
+      startScroll(pendingNews);
+      pendingNews = null;
     }
+    loadNews(); // 한 바퀴 끝날 때 서버 갱신
+  });
 
-    function scrollStep() {
-      pos -= 2;
-      if (pos < -newsEl.offsetWidth) {
-        loadNews();
-        return;
-      }
-      newsEl.style.transform = `translateX(${pos}px)`;
-      animationFrame = requestAnimationFrame(scrollStep);
-    }
+  // 강제로 애니메이션 재시작
+  newsEl.style.animation = "none";
+  newsEl.offsetHeight; // 리플로우
+  newsEl.style.animation = `scroll linear ${duration}s 1`;
+}
 
-    function playTTS() {
-      const audio = new Audio(API_URL + "/tts?t=" + Date.now());
-      audio.play().catch(err => console.log("🔇 자동재생 차단됨:", err));
-    }
-
-    // 초기 실행
-    loadNews();
-  </script>
+// 초기 실행
+loadNews();
+</script>
 </body>
 </html>
