@@ -1,87 +1,81 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<title>뉴스</title>
-<style>
-body { margin:0; background:transparent; overflow:hidden; }
-#wrapper { white-space:nowrap; overflow:hidden; position:fixed; top:0; left:0; transform:translateY(-8px); width:100vw; height:40px; z-index:9999; }
-#news { display:inline-block; font-size:28px; color:white; font-weight:bold;
-text-shadow:-1px 0 black,0 1px black,1px 0 black,0 -1px black,-1px -1px black,-1px 1px black,1px -1px black,1px 1px black;
-will-change:transform; backface-visibility:hidden; position:absolute; top:0; white-space:nowrap; animation-timing-function:linear; }
-@keyframes scroll { from { transform: translateX(100vw); } to { transform: translateX(-100%); } }
-
-/* 시작 버튼 */
-#startBtn {
-  position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
-  padding:20px 40px; font-size:20px; z-index:10000; cursor:pointer; border:none; background:#007bff; color:white; border-radius:8px;
-}
-</style>
+  <meta charset="UTF-8">
+  <title>실시간 뉴스 + 음성</title>
+  <style>
+    body {
+      margin: 0;
+      background: black;
+      overflow: hidden;
+      color: white;
+      font-size: 28px;
+      font-weight: bold;
+      text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
+    }
+    #wrapper {
+      white-space: nowrap;
+      overflow: hidden;
+      position: relative;
+      width: 100vw;
+      height: 40px;
+    }
+    #news {
+      display: inline-block;
+      padding-left: 100vw;
+    }
+  </style>
 </head>
 <body>
+  <div id="wrapper">
+    <div id="news">뉴스 로딩 중...</div>
+  </div>
 
-<div id="wrapper">
-  <div id="news">뉴스 로딩 중...</div>
-</div>
+  <script>
+    // ✅ Railway 서버 주소 입력
+    const API_URL = "https://proxy2-production-fe60.up.railway.app"; 
 
-<audio id="ttsAudio"></audio>
-<button id="startBtn">뉴스 시작 ▶️</button>
+    const newsEl = document.getElementById("news");
+    let animationFrame;
+    let pos = window.innerWidth;
 
-<script>
-const newsEl = document.getElementById("news");
-const audioEl = document.getElementById("ttsAudio");
-const startBtn = document.getElementById("startBtn");
-const NEWS_API = "/news";
-const TTS_API = "/tts";
-let pendingNews = null;
-let started = false;
-
-// 최초 클릭 후 모든 기능 활성화
-startBtn.addEventListener("click", () => {
-  started = true;
-  startBtn.style.display = "none";
-  loadNews();
-  playTTS();
-});
-
-// 뉴스 가져오기
-async function loadNews() {
-  try {
-    const res = await fetch(NEWS_API);
-    const data = await res.json();
-    if (data.news) {
-      pendingNews = data.news;
-      startScroll(pendingNews);
-      if (started) playTTS(); 
+    async function loadNews() {
+      try {
+        const res = await fetch(API_URL + "/news");
+        const data = await res.json();
+        if (data.news) {
+          startScroll(data.news);
+          playTTS(); // 음성 자동 실행
+        }
+      } catch (err) {
+        console.error("뉴스 불러오기 실패", err);
+      }
     }
-  } catch(err) { console.error(err); }
-}
 
-// 스크롤 시작
-function startScroll(text) {
-  newsEl.textContent = text;
-  const wrapperWidth = newsEl.parentElement.offsetWidth;
-  const textWidth = newsEl.offsetWidth;
-  const speed = 100;
-  const duration = (wrapperWidth + textWidth) / speed;
+    function startScroll(text) {
+      cancelAnimationFrame(animationFrame);
+      newsEl.textContent = text;
+      pos = window.innerWidth;
+      scrollStep();
+    }
 
-  newsEl.style.animation = "none";
-  newsEl.offsetHeight; // 리플로우
-  newsEl.style.animation = `scroll ${duration}s linear 1`;
+    function scrollStep() {
+      pos -= 2; // 스크롤 속도
+      if (pos < -newsEl.offsetWidth) {
+        loadNews(); // 한 줄 끝나면 새로운 뉴스
+        return;
+      }
+      newsEl.style.transform = `translateX(${pos}px)`;
+      animationFrame = requestAnimationFrame(scrollStep);
+    }
 
-  newsEl.addEventListener("animationend", function handler() {
-    newsEl.removeEventListener("animationend", handler);
-    if (pendingNews) { startScroll(pendingNews); pendingNews=null; }
-    loadNews(); // 한 바퀴 끝날 때 서버 갱신
-  });
-}
+    function playTTS() {
+      const audio = new Audio(API_URL + "/tts?t=" + Date.now());
+      audio.play().catch(err => console.log("🔇 자동재생 차단됨:", err));
+    }
 
-// TTS 재생
-function playTTS() {
-  audioEl.src = TTS_API + "?t=" + Date.now(); // 캐시 방지
-  audioEl.play().catch(err => console.log("자동 재생 제한:", err));
-}
-</script>
-
+    // 초기 실행
+    loadNews();
+  </script>
 </body>
 </html>
