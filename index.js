@@ -16,8 +16,8 @@ let lastNews = "뉴스 로딩 중...";
 const parser = new xml2js.Parser({ explicitArray: false });
 
 const CATEGORY_RSS = [
-  "https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko", // 헤드라인
-  "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx1YlY4U0FtdHZHZ0pMVWlnQVAB?hl=ko&gl=KR&ceid=KR:ko" // 대한민국
+  "https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko" // 헤드라인
+  //"https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx1YlY4U0FtdHZHZ0pMVWlnQVAB?hl=ko&gl=KR&ceid=KR:ko" // 대한민국
 ];
 
 // RSS fetch + parse
