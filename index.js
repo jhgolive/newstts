@@ -1,24 +1,23 @@
-const express = require("express");
-const cors = require("cors");
-const xml2js = require("xml2js");
-const fs = require("fs");
-const path = require("path");
-const say = require("say");
-const fetch = require("node-fetch"); // node-fetch 설치 필요
+import express from "express";
+import cors from "cors";
+import xml2js from "xml2js";
+import fs from "fs";
+import path from "path";
+import say from "say";
+import fetch from "node-fetch";
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 
 app.use(cors());
+app.use(express.static("public")); // 클라이언트 정적 파일 제공
 
 let lastNews = "뉴스 로딩 중...";
 const parser = new xml2js.Parser({ explicitArray: false });
 
-// 가져올 RSS URL
 const CATEGORY_RSS = [
   "https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko", // 헤드라인
   "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx1YlY4U0FtdHZHZ0pMVWlnQVAB?hl=ko&gl=KR&ceid=KR:ko" // 대한민국
-  // 필요하면 추가
 ];
 
 // RSS fetch + parse
@@ -56,11 +55,16 @@ async function fetchAllNews() {
 fetchAllNews();
 setInterval(fetchAllNews, 600000);
 
+// 뉴스 JSON
+app.get("/news", (req, res) => {
+  res.json({ news: lastNews });
+});
+
 // TTS mp3 생성
 app.get("/news-tts", async (req, res) => {
   try {
     const fileName = "news.mp3";
-    const filePath = path.join(__dirname, fileName);
+    const filePath = path.join(process.cwd(), fileName);
 
     await new Promise((resolve, reject) => {
       say.export(lastNews, null, 1.0, filePath, (err) => {
@@ -78,14 +82,12 @@ app.get("/news-tts", async (req, res) => {
   }
 });
 
-app.get("/news", (req, res) => {
-  res.json({ news: lastNews });
-});
-
+// 루트
 app.get("/", (req, res) => {
-  res.send("Server is running 🚀");
+  res.sendFile(path.join(process.cwd(), "public/index.html"));
 });
 
+// 서버 시작
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
 });
