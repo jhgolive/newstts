@@ -50,7 +50,7 @@
   <div id="news">뉴스 로딩 중...</div>
 </div>
 
-<audio id="ttsAudio" autoplay playsinline></audio>
+<audio id="ttsAudio" autoplay muted playsinline></audio>
 
 <script>
 const newsEl = document.getElementById("news");
@@ -107,13 +107,13 @@ async function playTTS() {
 
     let index = 0;
 
-    audioEl.src = `${data.urls[index]}&mute=0`;
+    audioEl.src = `${data.urls[index]}`;
     audioEl.play();
 
     audioEl.onended = () => {
       index++;
       if (index < data.urls.length) {
-        audioEl.src = `${data.urls[index]}&mute=0`;
+        audioEl.src = `${data.urls[index]}`;
         audioEl.play();
       }
     };
