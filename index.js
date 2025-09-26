@@ -10,7 +10,7 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 
 app.use(cors());
-app.use(express.static("public"));
+app.use(express.static("."));
 
 // Google Cloud 인증
 if (process.env.GOOGLE_CREDENTIALS) {
@@ -80,9 +80,9 @@ async function fetchAllNews() {
   }
 }
 
-// 초기 + 50분마다 갱신
+// 초기 + 30분마다 갱신
 fetchAllNews();
-setInterval(fetchAllNews, 3000000);
+setInterval(fetchAllNews, 1800000);
 
 // 텍스트를 4500바이트 이하로 분할
 function splitTextForTTS(text, maxBytes = 4500) {
@@ -135,7 +135,7 @@ app.get("/news-tts", async (req, res) => {
 
 // 루트
 app.get("/", (req, res) => 
-  res.sendFile(path.join(process.cwd(), "public/index.html"))
+  res.sendFile(path.join(process.cwd(), "index.html"))
 );
 
 app.listen(PORT, () => 
