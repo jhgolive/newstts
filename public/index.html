@@ -37,7 +37,7 @@ body {
 </style>
 </head>
 <body>
-333<div id="wrapper">
+555<div id="wrapper">
   <div id="news">뉴스 로딩 중...</div>
 </div>
 
@@ -81,9 +81,16 @@ async function startScrollAndTTS(text) {
     newsEl.offsetHeight; // 리플로우
     newsEl.style.animation = `scroll ${duration}s linear 1`;
 
+    // Web Audio API로 볼륨 제어
+    const ctx = new AudioContext();
+    const source = ctx.createMediaElementSource(audioEl);
+    const gainNode = ctx.createGain();
+    gainNode.gain.value = 0.2; // 원하는 볼륨 (0.0 ~ 1.0)
+    source.connect(gainNode).connect(ctx.destination);
+
     // 1초 지연 후 TTS 재생
     setTimeout(() => {
-      audioEl.volume = 0.2; // 0.0 = 무음, 1.0 = 최대음량
+      ctx.resume(); // 일부 브라우저에서 필요
       audioEl.play().catch(err => console.warn(err));
     }, 0); //1000 = 1초
   };
