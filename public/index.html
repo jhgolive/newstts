@@ -37,7 +37,7 @@ body {
 </style>
 </head>
 <body>
-<div id="wrapper">
+222<div id="wrapper">
   <div id="news">뉴스 로딩 중...</div>
 </div>
 
@@ -63,7 +63,7 @@ async function loadNews() {
   }
 }
 
-// 스크롤 + TTS 동기화
+// 스크롤 + TTS 동기화 (CSS 속도 보정)
 async function startScrollAndTTS(text) {
   newsEl.textContent = text;
 
@@ -71,26 +71,33 @@ async function startScrollAndTTS(text) {
   const ttsRes = await fetch(TTS_API);
   const ttsBlob = await ttsRes.blob();
   audioEl.src = URL.createObjectURL(ttsBlob);
-  audioEl.pause();
-  audioEl.currentTime = 0;
+  audioEl.load();
 
-  audioEl.onloadedmetadata = () => {
+  audioEl.oncanplaythrough = () => {
     const duration = audioEl.duration;
 
+    // 스크롤 거리 (텍스트 길이 + 화면 너비)
+    const distance = newsEl.offsetWidth + window.innerWidth;
+
+    // px/s 속도
+    const speed = distance / duration;
+
+    // 보정된 duration
+    const adjustedDuration = distance / speed;
+
+    // 애니메이션 재설정
     newsEl.style.animation = "none";
     newsEl.offsetHeight; // 리플로우
-    newsEl.style.animation = `scroll ${duration}s linear 1`;
+    newsEl.style.animation = `scroll ${adjustedDuration}s linear 1`;
 
-    // 1초 지연 후 TTS 재생
-    setTimeout(() => {
-      audioEl.play().catch(err => console.warn(err));
-    }, 0); //1000 = 1초
+    // 오디오 재생
+    audioEl.play().catch(err => console.warn(err));
   };
 
-  newsEl.addEventListener("animationend", function handler() {
-    newsEl.removeEventListener("animationend", handler);
+  // 오디오 끝나면 다시 뉴스 불러오기
+  audioEl.onended = () => {
     loadNews();
-  });
+  };
 }
 
 // 초기 실행
