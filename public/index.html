@@ -37,7 +37,7 @@ body {
 </style>
 </head>
 <body>
-888<div id="wrapper">
+<div id="wrapper">
   <div id="news">뉴스 로딩 중...</div>
 </div>
 
@@ -85,7 +85,7 @@ async function startScrollAndTTS(text) {
     const ctx = new AudioContext();
     const source = ctx.createMediaElementSource(audioEl);
     const gainNode = ctx.createGain();
-    gainNode.gain.value = 1.0; // 원하는 볼륨 (0.0 ~ 1.0)
+    gainNode.gain.value = 0.5; // 원하는 볼륨 (0.0 ~ 1.0)
     source.connect(gainNode).connect(ctx.destination);
 
     // 1초 지연 후 TTS 재생
