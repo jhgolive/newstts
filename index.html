@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>뉴스여자음성</title>
+<style>
+body {
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+}
+#wrapper {
+  white-space: nowrap;
+  overflow: hidden;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 40px;
+}
+#news {
+  display: inline-block;
+  font-size: 28px;
+  color: white;
+  font-weight: bold;
+  text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black,
+               -1px -1px black, -1px 1px black, 1px -1px black, 1px 1px black;
+  position: absolute;
+  top: 0;
+  white-space: nowrap;
+  will-change: transform;
+}
+@keyframes scroll {
+  from { transform: translateX(100vw); }
+  to { transform: translateX(-100%); }
+}
+</style>
+</head>
+<body>
+<div id="wrapper">
+  <div id="news">뉴스 로딩 중...</div>
+</div>
+
+<audio id="ttsAudio" playsinline></audio>
+
+<script>
+const newsEl = document.getElementById("news");
+const audioEl = document.getElementById("ttsAudio");
+
+const NEWS_API = "https://proxy2-production-b5a7.up.railway.app/news";
+const TTS_API = "https://proxy2-production-b5a7.up.railway.app/news-tts";
+
+// 뉴스 불러오기
+async function loadNews() {
+  try {
+    const res = await fetch(NEWS_API);
+    const data = await res.json();
+    if (data.news) {
+      startScrollAndTTS(data.news);
+    }
+  } catch (err) {
+    console.error("뉴스 불러오기 실패", err);
+  }
+}
+
+// 스크롤 + TTS 동기화
+async function startScrollAndTTS(text) {
+  newsEl.textContent = text;
+
+  // TTS mp3 받아오기
+  const ttsRes = await fetch(TTS_API);
+  const ttsBlob = await ttsRes.blob();
+  audioEl.src = URL.createObjectURL(ttsBlob);
+  audioEl.pause();
+  audioEl.currentTime = 0;
+
+  audioEl.onloadedmetadata = () => {
+    const duration = audioEl.duration;
+
+    newsEl.style.animation = "none";
+    newsEl.offsetHeight; // 리플로우
+    newsEl.style.animation = `scroll ${duration}s linear 1`;
+
+    // Web Audio API로 볼륨 제어
+    const ctx = new AudioContext();
+    const source = ctx.createMediaElementSource(audioEl);
+    const gainNode = ctx.createGain();
+    gainNode.gain.value = 0.5; // 원하는 볼륨 (0.0 ~ 1.0)
+    source.connect(gainNode).connect(ctx.destination);
+
+    // 1초 지연 후 TTS 재생
+    setTimeout(() => {
+      ctx.resume(); // 일부 브라우저에서 필요
+      audioEl.play().catch(err => console.warn(err));
+    }, 0); //1000 = 1초
+  };
+
+  newsEl.addEventListener("animationend", function handler() {
+    newsEl.removeEventListener("animationend", handler);
+    loadNews();
+  });
+}
+
+// 초기 실행
+loadNews();
+</script>
+</body>
+</html>
