@@ -80,10 +80,10 @@ async function fetchAllNews() {
   }
 }
 
-// 초기 + 24시간 마다 갱신
+// 초기 + 1시간 마다 갱신
 fetchAllNews();
-//setInterval(fetchAllNews, 3600000); // 60분
-setInterval(fetchAllNews, 86400000); // 24시간
+setInterval(fetchAllNews, 3600000); // 60분
+//setInterval(fetchAllNews, 86400000); // 24시간
 
 // 텍스트를 4500바이트 이하로 분할
 function splitTextForTTS(text, maxBytes = 4500) {
