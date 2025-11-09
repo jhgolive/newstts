@@ -80,7 +80,7 @@ async function fetchAllNews() {
   }
 }
 
-// 초기 + 30분 마다 갱신
+// 초기 + 45분 마다 갱신
 fetchAllNews();
 //setInterval(fetchAllNews, 1800000); // 30분
 setInterval(fetchAllNews, 2700000); // 45분
